@@ -75,9 +75,11 @@ export async function POST(req: Request) {
   let personId: string | null = null;
   const existing = await getPersonId();
   if (existing) {
+    // Only overwrite what was actually sent: a re-check-in without a phone must not wipe it.
+    const patch = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== ""));
     const { data } = await supa
       .from("people")
-      .update(fields)
+      .update(patch)
       .eq("id", existing)
       .eq("room_id", room.id)
       .select("id")
@@ -115,7 +117,7 @@ export async function POST(req: Request) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ person_id: pid }),
         });
-        if (!res.ok) console.error("[checkin] match/run", res.status, await res.text());
+        if (!res.ok) console.error("[checkin] match/run", res.status, (await res.text()).slice(0, 200));
       } catch (e) {
         console.error("[checkin] match/run failed", e);
       }
